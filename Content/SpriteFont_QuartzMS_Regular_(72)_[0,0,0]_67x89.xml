@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PersistableFontDetails xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Letterset>ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖabcdefghijklmnopqrstuvwxyzåäö0123456789.,;:?!-_~#"'&amp;()[]|`\/@°+=*$£€&lt;&gt;%</Letterset>
+  <AdjustHeight>0</AdjustHeight>
+  <AdjustWidth>0</AdjustWidth>
+  <SampleText>The quick brown fox jumped over the lazy dog.</SampleText>
+  <ShiftHorz>0</ShiftHorz>
+  <ShowGrid>true</ShowGrid>
+  <ShowBoundary>false</ShowBoundary>
+  <Size>72</Size>
+  <StrikeOut>false</StrikeOut>
+  <Underline>false</Underline>
+  <IsFill>true</IsFill>
+  <IsOutlineOne>true</IsOutlineOne>
+  <IsOutlineTwo>false</IsOutlineTwo>
+  <IsShadow>true</IsShadow>
+  <OutlineOneWidth>1</OutlineOneWidth>
+  <OutlineTwoWidth>2</OutlineTwoWidth>
+  <ShadowWidth>4</ShadowWidth>
+  <ShadowOffsetX>4</ShadowOffsetX>
+  <ShadowOffsetY>4</ShadowOffsetY>
+  <FontStyleDisplayName>Regular</FontStyleDisplayName>
+  <Height>89</Height>
+  <Width>67</Width>
+  <FontFamilyName>Quartz MS</FontFamilyName>
+  <FontStyleName>Normal</FontStyleName>
+  <FontStretchName>Normal</FontStretchName>
+  <FontWeightName>Normal</FontWeightName>
+  <FillColourName>#FF32CD32</FillColourName>
+  <OutlineOneColourName>#FF008000</OutlineOneColourName>
+  <OutlineTwoColourName>#FFFF0000</OutlineTwoColourName>
+  <ShadowColourName>#8032CD32</ShadowColourName>
+  <SampleBackgroundColourName>#FFFFFFFF</SampleBackgroundColourName>
+</PersistableFontDetails>
