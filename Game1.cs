@@ -6,6 +6,8 @@ using Microsoft.Xna.Framework.Input;
 using BorgNetLib.Packages;
 using BorgNetLib;
 using System.Threading;
+using System.Linq;
+using ServiceStack.Text;
 
 #endregion
 
@@ -31,7 +33,6 @@ namespace BorgPong
         Brick LeftPlayer;
         Brick RightPlayer;
 
-        BorgNetLib.NetService net;
         BorgNetLib.User user;
 
         public Game1()
@@ -42,6 +43,8 @@ namespace BorgPong
             this.Exiting += Game1_Exiting;
             this.Activated += Game1_Activated;
             this.Deactivated += Game1_Deactivated;
+            this.Window.Title = "BorgPong - Resistance is futile";
+           
         }
 
         private void Game1_Deactivated(object sender, EventArgs e)
@@ -51,7 +54,7 @@ namespace BorgPong
 
         private void Game1_Activated(object sender, EventArgs e)
         {
-            
+   
         }
 
         void Game1_Exiting(Object sender, EventArgs args)
@@ -70,13 +73,13 @@ namespace BorgPong
         {
             // TODO: Add your initialization logic here
             IsMouseVisible = false;
+            
             LeftPlayer = new Brick(new Vector2(0,0));
             RightPlayer = new Brick(new Vector2(780,0));
 
             BorgNetLib.ConnectionSetting connection = new BorgNetLib.ConnectionSetting("85.230.218.187", "1234");
-            net = new BorgNetLib.NetService(connection);
             user = new BorgNetLib.User();
-            user.Net = net;
+            user.Net = new BorgNetLib.NetService(connection);
 
             user.Login(Guid.NewGuid().ToString(), "");
 
@@ -130,9 +133,13 @@ namespace BorgPong
 
             if (currentUpdate >= numOfUpdatesBeforeSend)
             {
-                user.Net.Send(new PongUpdateMessage(0, 0, LeftPlayer.Y, gameTime.ElapsedGameTime, user));
-                previousPos = LeftPlayer.Y;
-                LeftPlayer.LastMovements.Clear();
+                //PongUpdateMessage msg = new PongUpdateMessage(0, 0, LeftPlayer.Y, gameTime.ElapsedGameTime, user);
+                //msg.LastMovements = LeftPlayer.LastMovements;
+                //user.Net.Send(msg);
+                //previousPos = LeftPlayer.Y;
+               // LeftPlayer.LastMovements.Clear();
+
+                user.Net.Send("$" + LeftPlayer.Y);
                 currentUpdate = 0;
             }
 
@@ -140,16 +147,16 @@ namespace BorgPong
             {
                 //LeftPlayer.Y = gameTime.ElapsedGameTime.Milliseconds * Mouse.GetState().Y;
                 LeftPlayer.Y = Mouse.GetState().Y;
-                LeftPlayer.LastMovements.Add(LeftPlayer.Y);
+                //LeftPlayer.LastMovements.Add(LeftPlayer.Y);
                 currentUpdate++;
             }
                // }
 
             base.Update(gameTime);
         }
-        int previousPos = 0;
+       // int previousPos = 0;
         short currentUpdate = 0;
-        short numOfUpdatesBeforeSend = 10;
+        short numOfUpdatesBeforeSend = 1;
 
 
         /// <summary>
@@ -159,8 +166,6 @@ namespace BorgPong
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-
-            // TODO: Add your drawing code here
 
             spriteBatch.Begin();
             spriteBatch.Draw(background, new Rectangle(0, 0, 800, 480), Color.White);
@@ -175,7 +180,8 @@ namespace BorgPong
             {
 
             }
-            spriteBatch.Draw(RedLine, RightPlayer.Vector, Color.White);
+
+            DrawText("CONNECTED TO SERVER: " + user.IsConnected);
 
             DrawText("UPDATES BEFORE SEND: " + numOfUpdatesBeforeSend);
             DrawText("CURRENT UPDATE: " + currentUpdate);
@@ -184,9 +190,30 @@ namespace BorgPong
             {
                 DrawText("SENDING");
             }
+           /* if(){
+
+            }*/
+            DrawText("Movement count: " + RightPlayer.LastMovements.Count);
+            if (RightPlayer.LastMovements.Any())
+            {
+                spriteBatch.Draw(RedLine, new Vector2(RightPlayer.X, RightPlayer.LastMovements[0]), Color.White);
+                RightPlayer.LastMovements.RemoveAt(0);
+                DrawText("SENDING");
+            }
+            else
+            {
+                spriteBatch.Draw(RedLine, new Vector2(RightPlayer.X, RightPlayer.Y), Color.White);
+            }
 
 
             spriteBatch.End();
+           
+           // foreach (int yPos in RightPlayer.LastMovements)
+          //  {
+           // spriteBatch.Begin();
+           //     spriteBatch.Draw(RedLine, new Vector2(RightPlayer.X,yPos), Color.White);
+           // spriteBatch.End();
+          //  }
             numOfText = 0;
 
 
@@ -214,13 +241,26 @@ namespace BorgPong
                     if (user.Net.Connected)
                     {
                         String dataFromClient = user.Net.Recieve();
-
+                        //dataFromClient.ToygJson<>
+                        if (dataFromClient.Length != 0)
+                        {
+                            if (dataFromClient[0] == '$')
+                            {
+                                int pos = 0;
+                                if (Int32.TryParse(dataFromClient.Substring(1), out pos))
+                                {
+                                RightPlayer.Y = pos;
+                                }
+                            }
+                        }
                         //Identify packets here
                         if (dataFromClient.IsSerializable<PongUpdateMessage>())
                         {
-
-                            PongUpdateMessage message = (PongUpdateMessage)dataFromClient.XmlDeserialize(typeof(PongUpdateMessage));
+                    PongUpdateMessage message = (PongUpdateMessage)dataFromClient.XmlDeserialize(typeof(PongUpdateMessage));
                             RightPlayer.Y = (int)message.Y;
+                            //RightPlayer.LastMovements = message.LastMovements;
+                            RightPlayer.LastMovements.Add(message.Y);
+                           
 
                         }
 
