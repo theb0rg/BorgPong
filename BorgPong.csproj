@@ -35,9 +35,13 @@
     <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Ball.cs" />
+    <Compile Include="BoundingBoxSize.cs" />
     <Compile Include="Brick.cs" />
     <Compile Include="Class1.cs" />
+    <Compile Include="Framecounter.cs" />
     <Compile Include="Game1.cs" />
+    <Compile Include="HitBox.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -70,6 +74,9 @@
     </Content>
     <None Include="BorgSpriteFont.spritefont" />
     <Content Include="Content\BorgSpriteFont.xnb">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\BorgBallSmall.xnb">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Include="oalinst.exe">

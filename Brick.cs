@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,42 +7,33 @@ using System.Text;
 
 namespace BorgPong
 {
-    public class Brick
+    public class Brick : GameObject
     {
-        int y;
-        public Brick()
+        public int Score = 0;
+        public Brick(Texture2D texture) : base(texture,new Vector2(0,0))
         {
-            X = 0;
-            y = 0;
-            PreviousY = 0;
             Height = 100;
             Width = 20;
             LastMovements = new List<int>();
         }
 
-        public Brick(Vector2 Position) : this()
+        public Brick(Texture2D texture,Vector2 Position) : this(texture)
         {
             this.X = (int)Position.X;
             this.Y = (int)Position.Y;
         }
 
-        public Brick(int X, int Y)
-            : this()
+        public Brick(Texture2D texture, int X, int Y)
+            : this(texture)
         {
             this.X = X;
             this.Y = Y;
         }
 
-        public int X
+        public float X
         {
-            get;
-            set;
-        }
-
-        public int PreviousY
-        {
-            get;
-            set;
+            get { return base.Position.X; }
+            set { base.Position.X = value; }
         }
 
         public List<int> LastMovements
@@ -50,16 +42,15 @@ namespace BorgPong
             set;
         }
 
-        public int Y
+        public float Y
         {
             get
             {
-                return y;
+                return base.Position.Y;
             }
             set
             {
-                PreviousY = y;
-                y = value;
+                base.Position.Y = value;
             }
         }
 
@@ -77,11 +68,15 @@ namespace BorgPong
 
         public Rectangle Rectangle
         {
-            get { return new Rectangle(X, Y, Width, Height); }
+            get { return new Rectangle((int)X, (int)Y, Width, Height); }
         }
         public Vector2 Vector
         {
             get { return new Vector2(X, Y); }
+        }
+        public HitBox HitBox
+        {
+            get { return new HitBox((int)X,(int)Y,Width, Height); }
         }
 
 
