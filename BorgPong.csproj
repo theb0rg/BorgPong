@@ -39,6 +39,7 @@
     <Compile Include="BoundingBoxSize.cs" />
     <Compile Include="Brick.cs" />
     <Compile Include="Class1.cs" />
+    <Compile Include="FixedStepGame.cs" />
     <Compile Include="Framecounter.cs" />
     <Compile Include="Game1.cs" />
     <Compile Include="HitBox.cs" />

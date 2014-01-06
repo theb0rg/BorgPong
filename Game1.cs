@@ -10,6 +10,9 @@ using System.Linq;
 using ServiceStack.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Net.Sockets;
+using System.Net;
+using System.IO;
 
 #endregion
 
@@ -18,7 +21,7 @@ namespace BorgPong
     /// <summary>
     /// This is the main type for your game
     /// </summary>
-    public class Game1 : Game
+    public class Game1 : FixedTimestepGame
     {
         GraphicsDeviceManager graphics;
         private static bool Shutdown = false;
@@ -42,9 +45,12 @@ namespace BorgPong
 
         BorgNetLib.User user;
         bool bShowHitBoxes = true;
+        bool RealRunningSlowly;
+
+        readonly float[] TestFpsRates = { 60.0f, 120.0f, 30.0f, 90.0f, 15.0f, 20.0f, 40.0f };
+        int FpsIndex = 0;
 
         public Game1()
-            : base()
         {
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
@@ -52,8 +58,16 @@ namespace BorgPong
             this.Activated += Game1_Activated;
             this.Deactivated += Game1_Deactivated;
             this.Window.Title = "BorgPong - Resistance is futile";
-           
+            graphics.SynchronizeWithVerticalRetrace = true;
+            IsFixedTimeStep = true;
+            TargetElapsedTime = TimeSpan.FromTicks((long)(10000000.0f / TestFpsRates[FpsIndex] + 0.5f));  
         }
+        void NewStepRate()
+        {
+            if (++FpsIndex > 6)
+                FpsIndex = 0;
+            TargetElapsedTime = TimeSpan.FromTicks((long)(10000000.0f / TestFpsRates[FpsIndex] + 0.5f));
+        }  
 
         private void Game1_Deactivated(object sender, EventArgs e)
         {
@@ -134,7 +148,7 @@ namespace BorgPong
         {
             ball.Position.X = LeftPlayer.BoundingBox.Right;
             ball.Position.Y = LeftPlayer.BoundingBox.Center.Y - (ball.BoundingBox.Height / 2);
-            ball.Velocity = new Vector2(3f, 0);         
+            ball.Velocity = new Vector2(100F, 0);         
         }
 
         /// <summary>
@@ -164,13 +178,13 @@ namespace BorgPong
             if (ball.BoundingBox.Intersects(LeftPlayer.BoundingBox))
             {
                 ball.Velocity.X *= -1;
-                ball.Position += ball.Velocity;
+                //ball.Position += ball.Velocity;
             }
 
             if (ball.BoundingBox.Intersects(RightPlayer.BoundingBox))
             {
                 ball.Velocity.X *= -1;
-                ball.Position += ball.Velocity;
+               // ball.Position += ball.Velocity;
             }
 
             if ((ball.Position.X < -ball.BoundingBox.Width)
@@ -186,6 +200,10 @@ namespace BorgPong
             
 
             KeyboardState newState = Keyboard.GetState();
+
+            if (newState.IsKeyDown(Keys.Space) &&
+        oldState.IsKeyUp(Keys.Space))
+                NewStepRate();
 
             // Is the SPACE key down?
             if (newState.IsKeyDown(Keys.F1))
@@ -225,24 +243,35 @@ namespace BorgPong
             // Update saved state.
             oldState = newState;
         }
-        /// <summary>
-        /// Allows the game to run logic such as updating the world,
-        /// checking for collisions, gathering input, and playing audio.
-        /// </summary>
-        /// <param name="gameTime">Provides a snapshot of timing values.</param>
-        protected override void Update(GameTime gameTime)
+
+        protected override void Update2(GameTime gameTime)
         {
+            // The gameTime passed to Draw is the bad XNA copy  
+            RealRunningSlowly = gameTime.IsRunningSlowly;
             UpdateInput();
-            ball.Position += ball.Velocity;
+            ball.Position.X += ball.Velocity.X * (float)TargetElapsedTime.TotalSeconds;
             if (!user.IsConnected && (int)gameTime.TotalGameTime.TotalSeconds % 10 == 0 && LastConnectionTrySecond != (int)gameTime.TotalGameTime.TotalSeconds)
             {
+                //TODO: Put login/Connect on thread
                 user.Login(Guid.NewGuid().ToString(), "");
                 LastConnectionTrySecond = (int)gameTime.TotalGameTime.TotalSeconds;
             }
 
             if (currentUpdate >= numOfUpdatesBeforeSend)
             {
-                user.Net.Send("$" + LeftPlayer.Y);
+              //  using (var config = JsConfig.BeginScope()) {
+
+               // config.ExcludePropertyReferences = new[] { "Exclude.Id", "IncludeExclude.Id", "IncludeExclude.Name" }
+                //user.Net.Send("$" + LeftPlayer.Y);
+                //throwOnDeserializationError = false,
+
+               // using (JsConfig.With(excludePropertyReferences: (new[] { "SenderUser.NetService", "user.netService" })))
+               // {
+                PongUpdateMessage msg = new PongUpdateMessage(0, 0, (int)LeftPlayer.Y, gameTime.TotalGameTime, user);
+                    //using (var config = JsConfig.BeginScope()) {
+                String message = msg.ToJson<PongUpdateMessage>();
+                user.Net.Send(message);
+               // }
                 currentUpdate = 0;
             }
 
@@ -258,8 +287,8 @@ namespace BorgPong
                 Mouse.SetPosition(Mouse.GetState().X, (int)LeftPlayer.Y);
             }
             CheckBallCollision();
-            base.Update(gameTime);
-        }
+        }  
+
        // int previousPos = 0;
         short currentUpdate = 0;
         short numOfUpdatesBeforeSend = 1;
@@ -275,8 +304,8 @@ namespace BorgPong
 
 
             spriteBatch.Begin();
+            spriteBatch.Draw(background, new Rectangle(0, 0, 800, 480), Color.White);
             spriteBatch.Draw(BorgCube, new Vector2(200, 100), null, Color.White, 0F, new Vector2(), 0.5F, SpriteEffects.None, 0F);
-            //spriteBatch.Draw(background, new Rectangle(0, 0, 800, 480), Color.White);
             ball.Draw(spriteBatch, 0.5F);
 
            // new Vector2(400, 240)
@@ -294,7 +323,10 @@ namespace BorgPong
           //  DrawText("CURRENT UPDATE: " + currentUpdate);
 
             DrawScores();
-
+           DrawText("Programmed FPS=" + TestFpsRates[FpsIndex].ToString() + ", Locked=" +
+                                   LockStep.ToString() + ", Locked FPS=" + StepRate.ToString() + ", Monitor FPS=" +
+                                   RefreshRate.ToString() + ", IsRunningSlow=" + RealRunningSlowly.ToString());
+           DrawText("(press [Space] to change FPS rate)");         
             if (currentUpdate >= numOfUpdatesBeforeSend)
             {
               //  DrawText("SENDING");
@@ -303,8 +335,8 @@ namespace BorgPong
 
             }*/
           //  DrawText("Movement count: " + RightPlayer.LastMovements.Count);
-            _frameCounter.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
-            DrawText("FPS: " + (int)_frameCounter.AverageFramesPerSecond + " PosRecieved: " + posRecived);
+            //_frameCounter.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
+            //DrawText("FPS: " + (int)_frameCounter.AverageFramesPerSecond + " PosRecieved: " + posRecived);
             if (RightPlayer.LastMovements.Any())
             {
                 spriteBatch.Draw(RedLine, new Vector2(RightPlayer.X, RightPlayer.LastMovements[0]), Color.White);
@@ -352,8 +384,84 @@ namespace BorgPong
                              .Select(i => (int)(y1 + (y2 - y1) * ((double)i / (steps - 1)))).Distinct().ToList();
         }
 
+        public void ProcessResponse(Byte[] data, int index, Int32 count)
+        {
+            using (var stream = new MemoryStream(data, index, count))
+            {
+                //var serializer = new XmlSerializer(typeof(ClientPacket));
+
+                //var packet = serializer.Deserialize(stream);
+
+                // Do something with the packet
+                //serverStream.CopyTo(stream);
+               // String asd = System.Text.Encoding.ASCII.GetString(data).Trim();
+                try
+                {
+                    JsonObject message = JsonSerializer.DeserializeFromStream<JsonObject>(stream);
+                    if (message == null || message.Keys.First().ToLower().Contains("xml")) return;
+
+                    PackageType type = (PackageType)Enum.Parse(typeof(PackageType), message["PackageType"]);
+
+                    switch (type)
+                    {
+                        case PackageType.PaddleUpdate:
+                            LeftPlayer.Y = int.Parse(message["Y"]);
+                            Debug.Print("Recieved " + message.Dump());
+                           // PongUpdateMessage a1 = message.Cast<PongUpdateMessage>().First();
+                            break;
+                    }
+                   
+                }
+                catch(Exception ex){
+                    Debug.Print("ProcessResponse:"+ex.Message);
+                }
+            }
+
+         /*   if (dataFromClient.Length != 0)
+            {
+                if (dataFromClient[0] == '$')
+                {
+                    int pos = 0;
+                    if (Int32.TryParse(dataFromClient.Substring(1), out pos))
+                    {
+                        List<int> l1 = (List<int>)Range(nSmoothingSteps, (int)RightPlayer.Y, pos);
+                        if (l1.Any()) l1.RemoveAt(0);
+                        //Debug.WriteLine(l1.Dump());
+                        RightPlayer.LastMovements.Clear();
+                        RightPlayer.LastMovements.AddRange(l1);
+                        posRecived++;
+
+                        RightPlayer.Y = pos;
+                    }
+                }
+                else if (dataFromClient.IsSerializable<PongUpdateMessage>())
+                {
+                    PongUpdateMessage message = (PongUpdateMessage)dataFromClient.XmlDeserialize(typeof(PongUpdateMessage));
+                    RightPlayer.Y = (int)message.Y;
+                    //RightPlayer.LastMovements = message.LastMovements;
+                    RightPlayer.LastMovements.Add(message.Y);
+
+
+                }
+            }*/
+        }
+        public void SocketReceive(Object sender, SocketAsyncEventArgs e)
+        {
+            try
+            {
+                ProcessResponse(e.Buffer, 0, e.BytesTransferred);
+
+                NetService.ResetBuffer(e);
+
+                e.AcceptSocket.ReceiveAsync(e);
+            }
+            catch(Exception ex){
+                Debug.Print("SocketRecieve:" + ex.Message);
+            }
+        }
         internal void SyncThread()
         {
+
             while (true)
             {
 
@@ -362,35 +470,16 @@ namespace BorgPong
 
                     if (user.Net.Connected)
                     {
-                        String dataFromClient = user.Net.Recieve();
+
+                        //String dataFromClient = user.Net.Recieve();
+                        var socketAsyncEventArgs = new SocketAsyncEventArgs();
+                        socketAsyncEventArgs.Completed += SocketReceive;
+                        NetService.StartListening(socketAsyncEventArgs,user.Net.Socket.Client);
+                        break;
+                       
                         //dataFromClient.ToygJson<>
-                        if (dataFromClient.Length != 0)
-                        {
-                            if (dataFromClient[0] == '$')
-                            {
-                                int pos = 0;
-                                if (Int32.TryParse(dataFromClient.Substring(1), out pos))                                
-                                {
-                                    List<int> l1 = (List<int>)Range(nSmoothingSteps, (int)RightPlayer.Y, pos);
-                                    if (l1.Any()) l1.RemoveAt(0);
-                                    //Debug.WriteLine(l1.Dump());
-                                    RightPlayer.LastMovements.Clear();
-                                    RightPlayer.LastMovements.AddRange(l1);
-                                    posRecived++;
-
-                                RightPlayer.Y = pos;
-                                }
-                            }
-                            else if (dataFromClient.IsSerializable<PongUpdateMessage>())
-                        {
-                    PongUpdateMessage message = (PongUpdateMessage)dataFromClient.XmlDeserialize(typeof(PongUpdateMessage));
-                            RightPlayer.Y = (int)message.Y;
-                            //RightPlayer.LastMovements = message.LastMovements;
-                            RightPlayer.LastMovements.Add(message.Y);
-                           
-
-                        }
-                        }
+                        string dataFromClient = "";
+                       
 
                     }
 
